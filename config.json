@@ -1,0 +1,9 @@
+{
+    "app_name": "Wani-Doko! ワニどこ!",
+    "window_width": 900,
+    "window_height": 650,
+    "quiz_question_count": 10,
+    "weak_word_threshold": 2,
+    "unlock_score_percent": 80,
+    "csv_encoding": "utf-8"
+}
