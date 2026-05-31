@@ -47,6 +47,20 @@ class AppController:
             f"{self._config.get('window_width', 900)}x"
             f"{self._config.get('window_height', 650)}"
         )
+
+        # ✨ 設定 App Icon
+        icon_path = os.path.join(self._base_dir, "assets", "icon_128.png")
+        if os.path.exists(icon_path):
+            try:
+                from PIL import Image, ImageTk
+                icon_img = Image.open(icon_path)
+                icon_photo = ImageTk.PhotoImage(icon_img)
+                self._root.iconphoto(True, icon_photo)
+                # 保持引用避免被垃圾回收
+                self._icon_ref = icon_photo
+            except Exception as e:
+                print(f"Icon 載入失敗：{e}")
+
         self._root.configure(bg=COLORS["bg"])
         self._root.resizable(False, False)
 

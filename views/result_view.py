@@ -3,8 +3,8 @@ ResultView — 成績結果畫面 (Result View) — 可愛風 (Kawaii Style)
 """
 
 import tkinter as tk
-from views.widgets import (COLORS, FONTS, KawaiiButton,
-                           create_gradient_canvas, sound, count_up_animation)
+from views.widgets import (COLORS, FONTS, KawaiiButton, sound, count_up_animation)
+from views.background_helper import create_background_canvas
 
 
 class ResultView:
@@ -12,15 +12,18 @@ class ResultView:
         self._parent = parent
         self.frame = tk.Frame(parent, bg=COLORS["bg"])
         self._canvas = None
+        self._bg_image = None  # 保持背景圖片參考
 
     def render(self, results: dict, weak_words: set,
                newly_unlocked: bool = False,
                on_back=None, on_export=None):
         self.frame.pack(fill=tk.BOTH, expand=True)
 
-        # 漸層背景
-        self._canvas = create_gradient_canvas(self.frame, 900, 650,
-                                               "#E8D5FF", "#FFF5FA")
+        # 背景（支援自訂背景）
+        self._canvas, self._bg_image = create_background_canvas(
+            self.frame, 900, 650, "#E8D5FF", "#FFF5FA"
+        )
+        self._canvas.pack(fill=tk.BOTH, expand=True)
 
         score = results["score"]
         total = results["total"]

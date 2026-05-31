@@ -5,9 +5,8 @@ MainMenuView — 主選單畫面 (Main Menu View) — 可愛風 (Kawaii Style)
 """
 
 import tkinter as tk
-from PIL import Image, ImageTk
-from views.widgets import (COLORS, FONTS, KawaiiButton,
-                           create_gradient_canvas, sound)
+from views.widgets import (COLORS, FONTS, KawaiiButton, sound)
+from views.background_helper import create_background_canvas
 from models.config_manager import ConfigManager
 
 
@@ -33,42 +32,15 @@ class MainMenuView:
         self._on_view_unlocks = on_view_unlocks
         self.frame.pack(fill=tk.BOTH, expand=True)
 
-        # ── 背景 Canvas ──
-        # 檢查是否有自訂背景
-        config = ConfigManager()
-        custom_bg = config.get_custom_background()
-
-        canvas = tk.Canvas(self.frame, width=900, height=650, highlightthickness=0)
+        # ── 背景 Canvas（支援自訂背景）──
+        canvas, self._bg_image = create_background_canvas(
+            self.frame, 900, 650, "#EEF2FF", "#E0E7FF"
+        )
         canvas.pack(fill=tk.BOTH, expand=True)
 
-        if custom_bg:
-            # 使用自訂背景圖片
-            try:
-                bg_path = f"assets/backgrounds/{custom_bg}.png"
-                img = Image.open(bg_path)
-                img = img.resize((900, 650), Image.Resampling.LANCZOS)
-
-                # 增加亮度並加上半透明白色遮罩
-                from PIL import ImageEnhance
-                enhancer = ImageEnhance.Brightness(img)
-                img = enhancer.enhance(1.5)  # 更亮一點
-
-                # 創建半透明白色遮罩並混合
-                white_overlay = Image.new('RGBA', (900, 650), (255, 255, 255, 100))
-                img = img.convert('RGBA')
-                img = Image.alpha_composite(img, white_overlay)
-
-                self._bg_image = ImageTk.PhotoImage(img)
-                canvas.create_image(0, 0, anchor=tk.NW, image=self._bg_image)
-
-                print(f"✓ 已載入自訂背景：{custom_bg}")
-            except Exception as e:
-                print(f"✗ 自訂背景載入失敗：{e}")
-                # 載入失敗時使用預設漸層
-                self._draw_gradient_background(canvas)
-        else:
-            # 使用預設漸層背景
-            self._draw_gradient_background(canvas)
+        # 檢查是否有自訂背景（用於顯示重置按鈕）
+        config = ConfigManager()
+        custom_bg = config.get_custom_background()
 
         # ── Title ──
         canvas.create_text(
@@ -280,27 +252,6 @@ class MainMenuView:
             "或重新啟動程式即可看到預設背景。",
             parent=self.frame
         )
-
-    def _draw_gradient_background(self, canvas):
-        """繪製漸層背景"""
-        # 簡化版漸層繪製
-        top_color = "#EEF2FF"
-        bot_color = "#E0E7FF"
-
-        # 使用矩形模擬漸層（簡化版）
-        steps = 50
-        for i in range(steps):
-            y1 = int(650 * i / steps)
-            y2 = int(650 * (i + 1) / steps)
-
-            # 計算中間色
-            ratio = i / steps
-            r = int(int(top_color[1:3], 16) * (1 - ratio) + int(bot_color[1:3], 16) * ratio)
-            g = int(int(top_color[3:5], 16) * (1 - ratio) + int(bot_color[3:5], 16) * ratio)
-            b = int(int(top_color[5:7], 16) * (1 - ratio) + int(bot_color[5:7], 16) * ratio)
-
-            color = f"#{r:02x}{g:02x}{b:02x}"
-            canvas.create_rectangle(0, y1, 900, y2, fill=color, outline="")
 
     def destroy(self):
         self.frame.destroy()

@@ -19,9 +19,9 @@ class UnlockView:
         self._images = {} # 防止被 GC 垃圾回收
         # 背景名稱對應（若 trivia.json 中沒有 background 欄位時使用）
         self._bg_names = {
-            0: "tokyo", 1: "osaka", 2: "kyoto", 3: "tokyo",
-            4: "osaka", 5: "tokyo", 6: "nara", 7: "tokyo",
-            8: "osaka", 9: "kyoto", 10: "nara", 11: "fuji", 12: "tokyo"
+            0: "bg1", 1: "bg2", 2: "bg3", 3: "bg4",
+            4: "bg5", 5: "bg6", 6: "bg7", 7: "bg8",
+            8: "bg9", 9: "bg10", 10: "bg11", 11: "bg12", 12: "bg13"
         }
 
     def render(self, unit_ids: list, unlocked: set,

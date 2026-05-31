@@ -3,8 +3,8 @@ QuizView — 測驗畫面 (Quiz View) — 可愛風 (Kawaii Style)
 """
 
 import tkinter as tk
-from views.widgets import (COLORS, FONTS, KawaiiButton, ProgressBar,
-                           create_gradient_canvas, sound)
+from views.widgets import (COLORS, FONTS, KawaiiButton, ProgressBar, sound)
+from views.background_helper import create_background_canvas
 
 
 class QuizView:
@@ -17,15 +17,18 @@ class QuizView:
         self._on_answer = None
         self._on_back = None
         self._canvas = None
+        self._bg_image = None  # 保持背景圖片參考
 
     def render(self, on_answer=None, on_back=None):
         self._on_answer = on_answer
         self._on_back = on_back
         self.frame.pack(fill=tk.BOTH, expand=True)
 
-        # 漸層背景
-        self._canvas = create_gradient_canvas(self.frame, 900, 650,
-                                               "#FFF5FA", "#F0E6FF")
+        # 背景（支援自訂背景）
+        self._canvas, self._bg_image = create_background_canvas(
+            self.frame, 900, 650, "#FFF5FA", "#F0E6FF"
+        )
+        self._canvas.pack(fill=tk.BOTH, expand=True)
 
         # ── Top bar ──
         back_f = tk.Frame(self.frame, bg=COLORS["gradient_top"])

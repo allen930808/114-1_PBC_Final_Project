@@ -6,5 +6,5 @@
     "weak_word_threshold": 2,
     "unlock_score_percent": 80,
     "csv_encoding": "utf-8",
-    "custom_background": null
+    "custom_background": "bg11"
 }

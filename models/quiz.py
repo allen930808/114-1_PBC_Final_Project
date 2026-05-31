@@ -8,6 +8,14 @@ import random
 from datetime import datetime
 
 
+def _has_kanji(text: str) -> bool:
+    """檢查字串是否包含日文漢字（CJK Unified Ideographs）"""
+    for char in text:
+        if '\u4e00' <= char <= '\u9fff':
+            return True
+    return False
+
+
 class QuizSession:
     """
     管理一次測驗流程的類別 (Class)。
@@ -85,12 +93,20 @@ class QuizSession:
 
         if mode == "zh_to_ja":
             question_text = vocab.chinese
-            # 中翻日：顯示「日文（平假名）」格式
-            correct_answer = f"{vocab.japanese}（{vocab.reading}）"
-            distractors_pool = [
-                f"{v.japanese}（{v.reading}）" for v in pool
-                if v.japanese != vocab.japanese
-            ]
+            # 中翻日：只對包含漢字的詞彙加上平假名標註
+            if _has_kanji(vocab.japanese):
+                correct_answer = f"{vocab.japanese}（{vocab.reading}）"
+            else:
+                correct_answer = vocab.japanese
+
+            # 干擾選項也要同樣處理
+            distractors_pool = []
+            for v in pool:
+                if v.japanese != vocab.japanese:
+                    if _has_kanji(v.japanese):
+                        distractors_pool.append(f"{v.japanese}（{v.reading}）")
+                    else:
+                        distractors_pool.append(v.japanese)
         elif mode in ("hira_mode", "kata_mode"):
             question_text = vocab.reading        # 羅馬拼音（如 "ka"）
             correct_answer = vocab.japanese      # 假名字符（如 "か"）
