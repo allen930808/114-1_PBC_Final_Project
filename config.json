@@ -5,5 +5,6 @@
     "quiz_question_count": 10,
     "weak_word_threshold": 2,
     "unlock_score_percent": 80,
-    "csv_encoding": "utf-8"
+    "csv_encoding": "utf-8",
+    "custom_background": null
 }

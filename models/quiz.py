@@ -85,9 +85,10 @@ class QuizSession:
 
         if mode == "zh_to_ja":
             question_text = vocab.chinese
-            correct_answer = vocab.japanese
+            # 中翻日：顯示「日文（平假名）」格式
+            correct_answer = f"{vocab.japanese}（{vocab.reading}）"
             distractors_pool = [
-                v.japanese for v in pool
+                f"{v.japanese}（{v.reading}）" for v in pool
                 if v.japanese != vocab.japanese
             ]
         elif mode in ("hira_mode", "kata_mode"):

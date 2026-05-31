@@ -5,8 +5,10 @@ MainMenuView — 主選單畫面 (Main Menu View) — 可愛風 (Kawaii Style)
 """
 
 import tkinter as tk
+from PIL import Image, ImageTk
 from views.widgets import (COLORS, FONTS, KawaiiButton,
                            create_gradient_canvas, sound)
+from models.config_manager import ConfigManager
 
 
 class MainMenuView:
@@ -22,6 +24,7 @@ class MainMenuView:
         self._on_view_unlocks = None
         self._unit_buttons: dict = {}
         self._mode_buttons: dict = {}
+        self._bg_image = None  # 保持背景圖片參考
 
     def render(self, unit_ids: list, on_start_quiz=None,
                on_view_progress=None, on_view_unlocks=None):
@@ -30,8 +33,42 @@ class MainMenuView:
         self._on_view_unlocks = on_view_unlocks
         self.frame.pack(fill=tk.BOTH, expand=True)
 
-        # ── 漸層背景 Canvas ──
-        canvas = create_gradient_canvas(self.frame, 900, 650)
+        # ── 背景 Canvas ──
+        # 檢查是否有自訂背景
+        config = ConfigManager()
+        custom_bg = config.get_custom_background()
+
+        canvas = tk.Canvas(self.frame, width=900, height=650, highlightthickness=0)
+        canvas.pack(fill=tk.BOTH, expand=True)
+
+        if custom_bg:
+            # 使用自訂背景圖片
+            try:
+                bg_path = f"assets/backgrounds/{custom_bg}.png"
+                img = Image.open(bg_path)
+                img = img.resize((900, 650), Image.Resampling.LANCZOS)
+
+                # 增加亮度並加上半透明白色遮罩
+                from PIL import ImageEnhance
+                enhancer = ImageEnhance.Brightness(img)
+                img = enhancer.enhance(1.5)  # 更亮一點
+
+                # 創建半透明白色遮罩並混合
+                white_overlay = Image.new('RGBA', (900, 650), (255, 255, 255, 100))
+                img = img.convert('RGBA')
+                img = Image.alpha_composite(img, white_overlay)
+
+                self._bg_image = ImageTk.PhotoImage(img)
+                canvas.create_image(0, 0, anchor=tk.NW, image=self._bg_image)
+
+                print(f"✓ 已載入自訂背景：{custom_bg}")
+            except Exception as e:
+                print(f"✗ 自訂背景載入失敗：{e}")
+                # 載入失敗時使用預設漸層
+                self._draw_gradient_background(canvas)
+        else:
+            # 使用預設漸層背景
+            self._draw_gradient_background(canvas)
 
         # ── Title ──
         canvas.create_text(
@@ -134,25 +171,40 @@ class MainMenuView:
 
         KawaiiButton(
             nav_frame, text="📊 成績紀錄",
-            width=180, height=44, corner_radius=12,
+            width=140, height=44, corner_radius=12,
             bg_color=COLORS["accent_purple"],
             fg_color=COLORS["white"],
             font=FONTS["body"], shadow=True,
             command=self._on_view_progress,
-        ).pack(side=tk.LEFT, padx=10)
+        ).pack(side=tk.LEFT, padx=6)
 
         KawaiiButton(
             nav_frame, text="🗾 解鎖背景",
-            width=180, height=44, corner_radius=12,
+            width=140, height=44, corner_radius=12,
             bg_color=COLORS["accent_mint"],
             fg_color=COLORS["text"],
             font=FONTS["body"], shadow=True,
             command=self._on_view_unlocks,
-        ).pack(side=tk.LEFT, padx=10)
+        ).pack(side=tk.LEFT, padx=6)
+
+        # 顯示背景重置按鈕（如果有自訂背景）
+        if custom_bg:
+            KawaiiButton(
+                nav_frame, text="🔄 預設背景",
+                width=140, height=44, corner_radius=12,
+                bg_color=COLORS["bg_card"],
+                fg_color=COLORS["text_muted"],
+                font=FONTS["body"], shadow=False,
+                command=self._reset_background,
+            ).pack(side=tk.LEFT, padx=6)
 
         # ── Footer ──
+        footer_text = "NTU PBC Final Project  ·  ワニさん日本語教室"
+        if custom_bg:
+            footer_text += f"  ·  背景：{custom_bg.upper()}"
+
         canvas.create_text(
-            450, 630, text="NTU PBC Final Project  ·  ワニさん日本語教室",
+            450, 630, text=footer_text,
             font=("Hiragino Maru Gothic ProN", 9),
             fill=COLORS["text_muted"],
         )
@@ -212,6 +264,43 @@ class MainMenuView:
         sound.play("click")
         if self._on_start_quiz:
             self._on_start_quiz(self._selected_unit, self._selected_mode)
+
+    def _reset_background(self):
+        """重置為預設背景"""
+        sound.play("pop")
+        config = ConfigManager()
+        config.clear_custom_background()
+
+        # 顯示訊息要求重新進入主選單
+        from tkinter import messagebox
+        messagebox.showinfo(
+            "成功",
+            "已重置為預設背景！\n\n" +
+            "請點擊「成績紀錄」或「解鎖背景」再返回，\n" +
+            "或重新啟動程式即可看到預設背景。",
+            parent=self.frame
+        )
+
+    def _draw_gradient_background(self, canvas):
+        """繪製漸層背景"""
+        # 簡化版漸層繪製
+        top_color = "#EEF2FF"
+        bot_color = "#E0E7FF"
+
+        # 使用矩形模擬漸層（簡化版）
+        steps = 50
+        for i in range(steps):
+            y1 = int(650 * i / steps)
+            y2 = int(650 * (i + 1) / steps)
+
+            # 計算中間色
+            ratio = i / steps
+            r = int(int(top_color[1:3], 16) * (1 - ratio) + int(bot_color[1:3], 16) * ratio)
+            g = int(int(top_color[3:5], 16) * (1 - ratio) + int(bot_color[3:5], 16) * ratio)
+            b = int(int(top_color[5:7], 16) * (1 - ratio) + int(bot_color[5:7], 16) * ratio)
+
+            color = f"#{r:02x}{g:02x}{b:02x}"
+            canvas.create_rectangle(0, y1, 900, y2, fill=color, outline="")
 
     def destroy(self):
         self.frame.destroy()

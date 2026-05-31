@@ -9,6 +9,7 @@ import json
 import os
 from views.widgets import (COLORS, FONTS, KawaiiButton,
                            create_gradient_canvas, sound)
+from models.config_manager import ConfigManager
 
 
 class UnlockView:
@@ -147,14 +148,36 @@ class UnlockView:
             canvas.create_text(450, 480, text=f"✨ {title} ✨", font=FONTS["heading"], fill=COLORS["accent_pink"])
             canvas.create_text(450, 530, text=desc, font=FONTS["small"], fill=COLORS["text"], width=560)
 
-        # 返回按鈕
+        # 按鈕區域
         btn_window = tk.Frame(top, bg=COLORS["white"])
         canvas.create_window(450, 610, window=btn_window)
+
+        # 設為背景按鈕
+        KawaiiButton(
+            btn_window, text="🎨 設為背景", width=140, height=36, corner_radius=8,
+            bg_color=COLORS["accent_mint"], fg_color=COLORS["text"],
+            font=FONTS["body_bold"], shadow=False,
+            command=lambda: self._set_as_background(bg_name, top)
+        ).pack(side=tk.LEFT, padx=5)
+
+        # 關閉按鈕
         KawaiiButton(
             btn_window, text="關閉", width=120, height=36, corner_radius=8,
             bg_color=COLORS["white"], fg_color=COLORS["text"],
             font=FONTS["body_bold"], shadow=False, command=top.destroy
-        ).pack()
+        ).pack(side=tk.LEFT, padx=5)
+
+    def _set_as_background(self, bg_name, window):
+        """設定為主選單背景"""
+        try:
+            config = ConfigManager()
+            config.set_custom_background(bg_name)
+            sound.play("unlock")
+            messagebox.showinfo("成功", f"已將背景設為 {bg_name.upper()}！\n重新進入主選單即可看到效果。")
+            window.destroy()
+        except Exception as e:
+            print(f"設定背景失敗：{e}")
+            messagebox.showerror("錯誤", "設定背景失敗，請稍後再試。")
 
     def destroy(self):
         self.frame.destroy()
