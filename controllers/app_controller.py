@@ -185,33 +185,68 @@ class AppController:
         self._current_view = view
 
     def show_progress(self):
-        """顯示成績紀錄頁面（可愛風）。"""
+        """顯示成績紀錄頁面（可愛風，支援滾動）。"""
         self._clear_container()
 
         frame = tk.Frame(self._container, bg=COLORS["bg"])
         frame.pack(fill=tk.BOTH, expand=True)
 
         from views.widgets import FONTS, KawaiiButton, create_gradient_canvas
-        
-        canvas = create_gradient_canvas(frame, 900, 650, "#F5EEFF", "#FFE4F0")
 
-        canvas.create_text(
-            450, 50, text="📊 成績紀錄", font=FONTS["heading"],
+        # 主背景 canvas（不滾動）
+        bg_canvas = create_gradient_canvas(frame, 900, 650, "#F5EEFF", "#FFE4F0")
+        bg_canvas.pack(fill=tk.BOTH, expand=True)
+
+        # 標題（固定在頂部）
+        bg_canvas.create_text(
+            450, 40, text="📊 成績紀錄", font=FONTS["heading"],
             fill=COLORS["text"],
         )
+
+        # 創建可滾動區域（80px 到 580px，高度 500px）
+        scroll_container = tk.Frame(frame, bg=COLORS["bg"])
+        bg_canvas.create_window(450, 330, window=scroll_container, width=880, height=500)
+
+        # Canvas + Scrollbar
+        scroll_canvas = tk.Canvas(scroll_container, bg=COLORS["bg"],
+                                  highlightthickness=0, width=860, height=500)
+        scrollbar = tk.Scrollbar(scroll_container, orient="vertical",
+                                command=scroll_canvas.yview)
+        scrollable_frame = tk.Frame(scroll_canvas, bg=COLORS["bg"])
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: scroll_canvas.configure(scrollregion=scroll_canvas.bbox("all"))
+        )
+
+        scroll_canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        scroll_canvas.configure(yscrollcommand=scrollbar.set)
+
+        scroll_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # 綁定滾輪事件到整個頁面
+        def _on_mousewheel(event):
+            scroll_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        frame.bind_all("<MouseWheel>", _on_mousewheel)
+
+        # === 內容區域（放在 scrollable_frame 中）===
 
         # 各課最佳成績
         history = self._db.load_quiz_history()
         if not history:
-            canvas.create_text(
-                450, 150, text="尚無測驗紀錄", font=FONTS["body"],
-                fill=COLORS["text_muted"],
-            )
+            tk.Label(
+                scrollable_frame, text="尚無測驗紀錄",
+                font=FONTS["body"], fg=COLORS["text_muted"],
+                bg=COLORS["bg"]
+            ).pack(pady=50)
         else:
-            # 表格顯示
-            table_f = tk.Frame(frame, bg=COLORS["bg_card"], bd=0, highlightbackground=COLORS["border"], highlightthickness=2)
-            canvas.create_window(450, 250, window=table_f)
-            
+            # 表格顯示（最多 10 筆）
+            table_f = tk.Frame(scrollable_frame, bg=COLORS["bg_card"], bd=0,
+                              highlightbackground=COLORS["border"], highlightthickness=2)
+            table_f.pack(pady=20, padx=40)
+
             header_f = tk.Frame(table_f, bg=COLORS["accent_pink"])
             header_f.pack(fill=tk.X)
             for col, text in enumerate(["課別", "模式", "分數", "時間"]):
@@ -245,21 +280,69 @@ class AppController:
                         width=15, anchor="center",
                     ).grid(row=0, column=col, padx=5, pady=4)
 
-        # 弱點單字
-        weak = self._progress.get_weak_words()
-        if weak:
-            canvas.create_text(
-                450, 450, text=f"⚠️ 弱點單字 ({len(weak)} 個)",
-                font=FONTS["body_bold"], fill=COLORS["accent_pink"]
-            )
-            canvas.create_text(
-                450, 480, text="、".join(sorted(weak)),
-                font=FONTS["japanese_sm"], fill=COLORS["text_muted"],
-                width=700
-            )
+        # 弱點單字（按課別分組顯示，錯過一次就算）
+        weak_by_unit = self._db.load_weak_words_by_unit(threshold=1)
 
-        btn_f = tk.Frame(frame, bg=COLORS["bg"])
-        canvas.create_window(450, 580, window=btn_f)
+        if weak_by_unit:
+            # 標題
+            tk.Label(
+                scrollable_frame, text="⚠️ 各課弱點單字",
+                font=FONTS["body_bold"], fg=COLORS["accent_pink"],
+                bg=COLORS["bg"]
+            ).pack(pady=(30, 15))
+
+            # 卡片容器（改為垂直排列，顯示所有課別）
+            weak_container = tk.Frame(scrollable_frame, bg=COLORS["bg"])
+            weak_container.pack(padx=40)
+
+            # 顯示所有課別（每行 4 個卡片）
+            for i, (unit, words) in enumerate(sorted(weak_by_unit.items())):
+                unit_card = tk.Frame(weak_container, bg=COLORS["bg_card"],
+                                    highlightbackground=COLORS["border"],
+                                    highlightthickness=1, padx=8, pady=6,
+                                    width=200, height=120)
+                unit_card.grid(row=i // 4, column=i % 4, padx=6, pady=8, sticky="n")
+
+                # 課別標題
+                tk.Label(
+                    unit_card, text=f"L{unit}",
+                    font=FONTS["body_bold"], fg=COLORS["accent_purple"],
+                    bg=COLORS["bg_card"]
+                ).pack()
+
+                # 單字列表（最多 6 個）
+                words_text = "、".join(words[:6])
+                tk.Label(
+                    unit_card, text=words_text,
+                    font=FONTS["japanese_sm"], fg=COLORS["text"],
+                    bg=COLORS["bg_card"], wraplength=180,
+                    justify=tk.LEFT
+                ).pack()
+
+                # 如果超過 6 個，顯示可點擊的「查看全部」
+                if len(words) > 6:
+                    def show_all_weak_words(u=unit, w=words):
+                        all_words = "、".join(w)
+                        messagebox.showinfo(
+                            f"L{u} 弱點單字 ({len(w)} 個)",
+                            all_words,
+                            parent=frame
+                        )
+
+                    view_all_label = tk.Label(
+                        unit_card, text=f"...查看全部 {len(words)} 個 →",
+                        font=FONTS["small"], fg=COLORS["accent_pink"],
+                        bg=COLORS["bg_card"], cursor="hand2"
+                    )
+                    view_all_label.pack()
+                    view_all_label.bind("<Button-1>", lambda e, f=show_all_weak_words: f())
+
+        # 底部留白
+        tk.Frame(scrollable_frame, bg=COLORS["bg"], height=20).pack()
+
+        # 返回按鈕（固定在底部）
+        btn_f = tk.Frame(frame, bg=COLORS["gradient_bot"])
+        bg_canvas.create_window(450, 600, window=btn_f)
         
         KawaiiButton(
             btn_f, text="🏠 返回主選單",

@@ -99,10 +99,11 @@ class QuizSession:
             else:
                 correct_answer = vocab.japanese
 
-            # 干擾選項也要同樣處理
+            # 干擾選項：過濾掉假名單字（第0關），只保留一般單字
             distractors_pool = []
             for v in pool:
-                if v.japanese != vocab.japanese:
+                # 過濾條件：不是當前單字，且不是假名（平假名/片假名）
+                if v.japanese != vocab.japanese and v.chinese not in ("平假名", "片假名"):
                     if _has_kanji(v.japanese):
                         distractors_pool.append(f"{v.japanese}（{v.reading}）")
                     else:
@@ -117,9 +118,10 @@ class QuizSession:
         else:  # ja_to_zh
             question_text = vocab.japanese
             correct_answer = vocab.chinese
+            # 干擾選項：過濾掉假名單字（第0關）
             distractors_pool = [
                 v.chinese for v in pool
-                if v.chinese != vocab.chinese
+                if v.chinese != vocab.chinese and v.chinese not in ("平假名", "片假名")
             ]
 
         # 去重後取 3 個干擾選項
@@ -199,6 +201,7 @@ class QuizSession:
                 'percent': float,
                 'duration_seconds': float,
                 'wrong_list': list[dict],
+                'correct_list': list[dict],
                 'start_time': datetime,
             }
         """
@@ -211,6 +214,7 @@ class QuizSession:
             duration = (datetime.now() - self._start_time).total_seconds()
 
         wrong_list = []
+        correct_list = []
         for r in self._results:
             if not r["is_correct"]:
                 wrong_list.append({
@@ -219,6 +223,11 @@ class QuizSession:
                     "reading": r["vocab"].reading,
                     "user_answer": r["user_answer"],
                     "correct_answer": r["correct_answer"],
+                })
+            else:
+                correct_list.append({
+                    "japanese": r["vocab"].japanese,
+                    "chinese": r["vocab"].chinese,
                 })
 
         return {
@@ -229,5 +238,6 @@ class QuizSession:
             "percent": percent,
             "duration_seconds": duration,
             "wrong_list": wrong_list,
+            "correct_list": correct_list,
             "start_time": self._start_time,
         }

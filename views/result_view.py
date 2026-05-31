@@ -94,15 +94,17 @@ class ResultView:
 
         y_offset += 10
 
-        # ── Weak Words ──
-        if weak_words:
+        # ── Weak Words（僅顯示本關錯題）──
+        # 只顯示本次測驗的錯題，不顯示全域弱點單字
+        current_weak = {w['japanese'] for w in wrong}
+        if current_weak:
             self._canvas.create_text(
-                150, y_offset, text=f"⚠️ 弱點單字 ({len(weak_words)} 個):",
+                150, y_offset, text=f"⚠️ 本關弱點單字 ({len(current_weak)} 個):",
                 font=FONTS["body_bold"], fill=COLORS["accent_pink"], anchor="w"
             )
             y_offset += 30
-            
-            weak_text = "、".join(sorted(weak_words))
+
+            weak_text = "、".join(sorted(current_weak))
             self._canvas.create_text(
                 170, y_offset, text=weak_text,
                 font=FONTS["japanese_sm"], fill=COLORS["text_muted"],

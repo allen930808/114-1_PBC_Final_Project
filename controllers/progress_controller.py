@@ -49,6 +49,7 @@ class ProgressController:
             score=results["score"],
             total=results["total"],
             wrong_list=results["wrong_list"],
+            correct_list=results.get("correct_list", []),
         )
 
         # 檢查解鎖

@@ -17,6 +17,7 @@ class UnlockView:
         self._parent = parent
         self.frame = tk.Frame(parent, bg=COLORS["bg"])
         self._images = {} # 防止被 GC 垃圾回收
+        self._mousewheel_bound = False  # 追蹤滾輪綁定狀態
         # 背景名稱對應（若 trivia.json 中沒有 background 欄位時使用）
         self._bg_names = {
             0: "bg1", 1: "bg2", 2: "bg3", 3: "bg4",
@@ -28,15 +29,17 @@ class UnlockView:
                trivia_path: str, on_back=None):
         self.frame.pack(fill=tk.BOTH, expand=True)
 
-        canvas = create_gradient_canvas(self.frame, 900, 650,
-                                       "#FFF0F5", "#E8D5FF")
+        # 主背景 canvas（不滾動）
+        bg_canvas = create_gradient_canvas(self.frame, 900, 650,
+                                          "#FFF0F5", "#E8D5FF")
+        bg_canvas.pack(fill=tk.BOTH, expand=True)
 
         # Header
-        canvas.create_text(
+        bg_canvas.create_text(
             450, 40, text="🔓 解鎖背景與日本小知識",
             font=FONTS["heading"], fill=COLORS["text"],
         )
-        canvas.create_text(
+        bg_canvas.create_text(
             450, 70, text="完成各課測驗（正確率 ≥ 80%）即可解鎖！",
             font=FONTS["small"], fill=COLORS["text_muted"],
         )
@@ -49,9 +52,41 @@ class UnlockView:
             except Exception:
                 pass
 
-        # Card grid
-        grid = tk.Frame(self.frame, bg=COLORS["bg_card"])
-        canvas.create_window(450, 310, window=grid)
+        # 創建可滾動區域（100px 到 540px，高度 440px）
+        scroll_container = tk.Frame(self.frame, bg=COLORS["bg"])
+        bg_canvas.create_window(450, 310, window=scroll_container, width=880, height=440)
+
+        # Canvas + Scrollbar
+        canvas = tk.Canvas(scroll_container, bg=COLORS["bg"],
+                          highlightthickness=0, width=860, height=440)
+        scrollbar = tk.Scrollbar(scroll_container, orient="vertical",
+                                command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg=COLORS["bg"])
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # 綁定滾輪事件到整個頁面（不只是 canvas）
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        # 綁定到整個 frame，讓滑鼠在頁面任何位置都能滾動
+        self.frame.bind_all("<MouseWheel>", _on_mousewheel)
+
+        # 儲存綁定 ID 以便之後清理
+        self._mousewheel_bound = True
+
+        # Card grid（放在 scrollable_frame 中）
+        grid = tk.Frame(scrollable_frame, bg=COLORS["bg"])
+        grid.pack(padx=20, pady=10)
 
         # 顯示 3 個卡片一行
         for i, uid in enumerate(unit_ids):
@@ -59,9 +94,9 @@ class UnlockView:
             self._create_card(grid, uid, is_unlocked, trivia,
                               row=i // 3, col=i % 3)
 
-        # Back button
+        # Back button（固定在底部）
         btn_f = tk.Frame(self.frame, bg=COLORS["gradient_bot"])
-        canvas.create_window(450, 580, window=btn_f)
+        bg_canvas.create_window(450, 600, window=btn_f)
         KawaiiButton(
             btn_f, text="🏠 返回主選單",
             width=220, height=50, corner_radius=16,
@@ -180,4 +215,8 @@ class UnlockView:
             messagebox.showerror("錯誤", "設定背景失敗，請稍後再試。")
 
     def destroy(self):
+        # 清理滾輪綁定
+        if self._mousewheel_bound:
+            self.frame.unbind_all("<MouseWheel>")
+            self._mousewheel_bound = False
         self.frame.destroy()
